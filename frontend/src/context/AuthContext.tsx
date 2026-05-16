@@ -22,13 +22,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    try {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      if (storedToken && storedUser) {
+        const parsed = JSON.parse(storedUser);
+        if (parsed && typeof parsed === 'object' && typeof parsed.id === 'string') {
+          setToken(storedToken);
+          setUser(parsed as User);
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
+    } catch (err) {
+      console.warn('[AuthContext] failed to restore session, clearing:', err);
+      try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } catch {
+        /* ignore */
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = (newToken: string, newUser: User) => {
