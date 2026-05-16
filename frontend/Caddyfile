@@ -1,0 +1,10 @@
+:{$PORT} {
+  root * dist
+  file_server
+  try_files {path} /index.html
+  
+  header {
+    Access-Control-Allow-Origin *
+    Cache-Control "public, max-age=3600"
+  }
+}
