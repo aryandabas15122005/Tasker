@@ -3,6 +3,28 @@ import nodemailer, { Transporter } from 'nodemailer';
 let cachedTransporter: Transporter | null = null;
 let cachedSignature = '';
 
+export interface MailerStatus {
+  lastSuccessAt: Date | null;
+  lastFailureAt: Date | null;
+  lastFailureMessage: string | null;
+  lastFailureCode: string | null;
+  successCount: number;
+  failureCount: number;
+}
+
+const status: MailerStatus = {
+  lastSuccessAt: null,
+  lastFailureAt: null,
+  lastFailureMessage: null,
+  lastFailureCode: null,
+  successCount: 0,
+  failureCount: 0
+};
+
+export function getMailerStatus(): MailerStatus {
+  return { ...status };
+}
+
 function buildTransporter(): Transporter | null {
   const user = process.env.EMAIL_USER?.trim();
   const pass = process.env.EMAIL_PASS?.replace(/\s/g, '');
@@ -22,7 +44,14 @@ function buildTransporter(): Transporter | null {
     socketTimeout: 25000,
     // Force IPv4 — Railway's IPv6 path to smtp.gmail.com frequently hangs.
     family: 4,
-    tls: { servername: 'smtp.gmail.com' }
+    // EHLO hostname. Gmail tolerates generic ones, but a stable identifier
+    // reduces the chance of rate-limit / spam-score weirdness on Railway.
+    name: process.env.MAILER_EHLO_NAME || 'tasker.production',
+    tls: {
+      servername: 'smtp.gmail.com',
+      minVersion: 'TLSv1.2',
+      rejectUnauthorized: true
+    }
   } as any);
 }
 
@@ -47,7 +76,14 @@ export interface SendOtpEmailArgs {
 export function sendOtpEmail({ to, otp }: SendOtpEmailArgs): void {
   // Fire-and-forget so HTTP responses never block on SMTP.
   void sendWithRetry(to, otp).catch((err) => {
-    console.error(`[mailer] gave up sending OTP to ${to}:`, err?.message || err);
+    const code = err?.code || err?.responseCode || 'UNKNOWN';
+    status.lastFailureAt = new Date();
+    status.lastFailureCode = String(code);
+    status.lastFailureMessage = err?.message ? String(err.message) : String(err);
+    status.failureCount += 1;
+    console.error(
+      `[mailer] EMAIL_TRANSPORT_DOWN: gave up sending OTP to ${to} (code=${code}): ${status.lastFailureMessage}`
+    );
   });
 }
 
@@ -84,6 +120,8 @@ async function sendWithRetry(to: string, otp: string, attempts = 3): Promise<voi
     }
     try {
       const info = await transporter.sendMail(mail);
+      status.lastSuccessAt = new Date();
+      status.successCount += 1;
       console.log(`[mailer] OTP email sent to ${to} (id=${info.messageId}, attempt=${attempt}).`);
       return;
     } catch (err: any) {

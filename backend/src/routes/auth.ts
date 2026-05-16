@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma';
-import { sendOtpEmail } from '../mailer';
+import { sendOtpEmail, getMailerStatus } from '../mailer';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
@@ -101,6 +101,34 @@ router.post('/signup', async (req: Request, res: Response): Promise<any> => {
     console.error('Signup error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
+});
+
+// Admin escape hatch: returns the most recent un-expired OTP for a given email
+// plus mailer health, gated by ADMIN_SECRET. Only enabled if the env var is set.
+// Useful when Gmail SMTP fails and you need to read the OTP without digging logs.
+router.get('/admin/peek-otp', async (req: Request, res: Response): Promise<any> => {
+  const required = process.env.ADMIN_SECRET;
+  if (!required) {
+    return res.status(404).json({ message: 'Not found' });
+  }
+  const provided = req.header('x-admin-secret');
+  if (provided !== required) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  const email = String(req.query.email || '').trim().toLowerCase();
+  if (!email) {
+    return res.status(400).json({ message: 'email query parameter is required' });
+  }
+
+  const record = await prisma.otpVerification.findUnique({ where: { email } });
+  return res.json({
+    email,
+    otp: record?.otp || null,
+    expiresAt: record?.expiresAt || null,
+    expired: record ? record.expiresAt < new Date() : null,
+    mailer: getMailerStatus()
+  });
 });
 
 router.post('/login', async (req: Request, res: Response): Promise<any> => {

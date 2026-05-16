@@ -14,8 +14,23 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
+
+  const requestOtp = async () => {
+    const res = await api.post('/auth/send-otp', { email });
+    if (res.data.devOtp) {
+      console.log(`%c[TASKER DEV] Your OTP is: ${res.data.devOtp}`, "color: #0f766e; font-size: 16px; font-weight: bold; background: #e8efed; padding: 8px; border-radius: 4px;");
+    }
+    setResendCooldown(30);
+  };
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,14 +38,26 @@ const Signup = () => {
     setError('');
     setSuccess('');
     try {
-      const res = await api.post('/auth/send-otp', { email });
-      if (res.data.devOtp) {
-        console.log(`%c[TASKER DEV] Your OTP is: ${res.data.devOtp}`, "color: #0f766e; font-size: 16px; font-weight: bold; background: #e8efed; padding: 8px; border-radius: 4px;");
-      }
+      await requestOtp();
       setStep(2);
-      setSuccess('Verification code sent to your email! It expires in 10 minutes.');
+      setSuccess('Verification code sent to your email! It expires in 10 minutes. Check spam if it does not arrive within a minute.');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to send verification code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || loading) return;
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await requestOtp();
+      setSuccess('A new code has been sent. It expires in 10 minutes.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to resend code.');
     } finally {
       setLoading(false);
     }
@@ -138,6 +165,25 @@ const Signup = () => {
               <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', padding: '0.75rem' }} disabled={loading}>
                 {loading ? 'Verifying...' : 'Verify & Create Account'}
               </button>
+              <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.85rem' }}>
+                <span className="text-muted">Didn't get the code? </span>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resendCooldown > 0 || loading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    color: resendCooldown > 0 ? 'var(--text-muted)' : 'var(--primary)',
+                    cursor: resendCooldown > 0 || loading ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+                </button>
+              </div>
               <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem' }} onClick={() => { setStep(1); setOtp(''); setError(''); setSuccess(''); }}>
                 Back
               </button>
