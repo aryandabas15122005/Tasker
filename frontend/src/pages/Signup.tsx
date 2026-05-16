@@ -9,70 +9,21 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('MEMBER');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState(1);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  React.useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const id = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [resendCooldown]);
-
-  const requestOtp = async () => {
-    const res = await api.post('/auth/send-otp', { email });
-    if (res.data.devOtp) {
-      console.log(`%c[TASKER DEV] Your OTP is: ${res.data.devOtp}`, "color: #0f766e; font-size: 16px; font-weight: bold; background: #e8efed; padding: 8px; border-radius: 4px;");
-    }
-    setResendCooldown(30);
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    try {
-      await requestOtp();
-      setStep(2);
-      setSuccess('Verification code sent to your email! It expires in 10 minutes. Check spam if it does not arrive within a minute.');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send verification code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0 || loading) return;
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    try {
-      await requestOtp();
-      setSuccess('A new code has been sent. It expires in 10 minutes.');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to resend code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifySignup = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const res = await api.post('/auth/signup', { name, email, password, role, otp });
+      const res = await api.post('/auth/signup', { name, email, password, role });
       login(res.data.token, res.data.user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Verification failed.');
+      setError(err.response?.data?.message || 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -110,10 +61,10 @@ const Signup = () => {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div style={{ width: '100%', maxWidth: '380px' }}>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 700, fontFamily: 'var(--font-heading)', marginBottom: '0.35rem' }}>
-            {step === 1 ? 'Create Account' : 'Verify Email'}
+            Create Account
           </h2>
           <p className="text-muted" style={{ marginBottom: '2rem', fontSize: '0.9rem' }}>
-            {step === 1 ? 'Fill in your details to get started.' : `Enter the 6-digit code sent to ${email}`}
+            Fill in your details to get started.
           </p>
           
           {error && (
@@ -121,81 +72,36 @@ const Signup = () => {
               {error}
             </div>
           )}
-          {success && (
-            <div style={{ padding: '0.75rem 1rem', backgroundColor: 'rgba(45, 157, 120, 0.08)', borderLeft: '3px solid var(--success)', color: 'var(--success)', borderRadius: '6px', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 500 }}>
-              {success}
+
+          <form onSubmit={handleSignup} className="animate-fade-in">
+            <div className="input-group">
+              <label>Full Name</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="John Doe" />
             </div>
-          )}
+            <div className="input-group">
+              <label>Email Address</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="name@company.com" />
+            </div>
+            <div className="input-group">
+              <label>Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" minLength={6} />
+            </div>
+            <div className="input-group">
+              <label>Role</label>
+              <select value={role} onChange={e => setRole(e.target.value)}>
+                <option value="MEMBER">Member</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', padding: '0.75rem' }} disabled={loading}>
+              {loading ? 'Creating Account...' : 'Sign Up'}
+            </button>
+          </form>
 
-          {step === 1 ? (
-            <form onSubmit={handleSendOtp} className="animate-fade-in">
-              <div className="input-group">
-                <label>Full Name</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="John Doe" />
-              </div>
-              <div className="input-group">
-                <label>Email Address</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="name@company.com" />
-              </div>
-              <div className="input-group">
-                <label>Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" minLength={6} />
-              </div>
-              <div className="input-group">
-                <label>Role</label>
-                <select value={role} onChange={e => setRole(e.target.value)}>
-                  <option value="MEMBER">Member</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-              </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', padding: '0.75rem' }} disabled={loading}>
-                {loading ? 'Sending Code...' : 'Continue'}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifySignup} className="animate-fade-in">
-              <div className="input-group">
-                <label>Verification Code</label>
-                <input 
-                  type="text" value={otp} onChange={e => setOtp(e.target.value)} 
-                  required placeholder="123456" maxLength={6}
-                  style={{ fontSize: '1.3rem', letterSpacing: '0.3em', textAlign: 'center', fontWeight: 700 }} 
-                />
-              </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', padding: '0.75rem' }} disabled={loading}>
-                {loading ? 'Verifying...' : 'Verify & Create Account'}
-              </button>
-              <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.85rem' }}>
-                <span className="text-muted">Didn't get the code? </span>
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={resendCooldown > 0 || loading}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    color: resendCooldown > 0 ? 'var(--text-muted)' : 'var(--primary)',
-                    cursor: resendCooldown > 0 || loading ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.85rem'
-                  }}
-                >
-                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
-                </button>
-              </div>
-              <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem' }} onClick={() => { setStep(1); setOtp(''); setError(''); setSuccess(''); }}>
-                Back
-              </button>
-            </form>
-          )}
-
-          {step === 1 && (
-            <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.85rem' }}>
-              <span className="text-muted">Already have an account? </span>
-              <Link to="/login" style={{ fontWeight: 600, color: 'var(--primary)' }}>Sign in</Link>
-            </p>
-          )}
+          <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.85rem' }}>
+            <span className="text-muted">Already have an account? </span>
+            <Link to="/login" style={{ fontWeight: 600, color: 'var(--primary)' }}>Sign in</Link>
+          </p>
         </div>
       </div>
     </div>
