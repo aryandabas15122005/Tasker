@@ -72,3 +72,8 @@ Navigate to the `frontend` directory:
 npm install
 npm run dev
 ```
+
+---
+
+## Project Note: OTP Verification
+An OTP (One-Time Password) verification system was initially implemented using Nodemailer and Gmail SMTP. However, due to external limitations (Gmail SMTP blocks on certain cloud networks and domain requirements for third-party paid services), the system was simplified to a direct signup flow to ensure a seamless and reliable user experience for all visitors.
