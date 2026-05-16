@@ -7,6 +7,8 @@ import taskRoutes from './routes/tasks';
 import dashboardRoutes from './routes/dashboard';
 import userRoutes from './routes/users';
 
+import prisma from './prisma';
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -27,7 +29,10 @@ app.use(
     origin: (origin, cb) => {
       // Allow tools without an Origin header (curl, health checks, server-to-server).
       if (!origin) return cb(null, true);
-      if (allowlist.includes(origin)) return cb(null, true);
+      // In development, allow all, or if explicitly in allowlist
+      if (process.env.NODE_ENV !== 'production' || allowlist.includes(origin) || allowlist.includes('*')) {
+        return cb(null, true);
+      }
       console.warn(`[cors] blocked origin: ${origin}`);
       return cb(new Error(`CORS: origin ${origin} not allowed`));
     },
@@ -42,11 +47,23 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/users', userRoutes);
 
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' });
+app.get('/api/health', async (_req, res) => {
+  try {
+    await prisma.user.findFirst();
+    res.json({ status: 'ok', database: 'connected' });
+  } catch (error) {
+    res.status(503).json({ status: 'error', database: 'disconnected', error: String(error) });
+  }
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Server is running on port ${port}`);
   console.log(`[cors] allowed origins: ${allowlist.join(', ')}`);
+  
+  try {
+    await prisma.$connect();
+    console.log('Successfully connected to MongoDB');
+  } catch (err) {
+    console.error('Failed to connect to MongoDB:', err);
+  }
 });
