@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell
@@ -60,7 +60,7 @@ const Analytics = () => {
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                   >
-                    {data.taskStatusCounts.map((entry: any, index: number) => (
+                    {data.taskStatusCounts.map((_: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

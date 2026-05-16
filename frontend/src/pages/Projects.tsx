@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Folder, Users, Search, Filter } from 'lucide-react';
+import { Plus, Folder, Users, Search } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
