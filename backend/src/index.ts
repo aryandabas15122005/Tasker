@@ -29,10 +29,15 @@ app.use(
     origin: (origin, cb) => {
       // Allow tools without an Origin header (curl, health checks, server-to-server).
       if (!origin) return cb(null, true);
-      // In development, allow all, or if explicitly in allowlist
-      if (process.env.NODE_ENV !== 'production' || allowlist.includes(origin) || allowlist.includes('*')) {
+      
+      // ALLOW ALL in development OR if the origin is from Railway OR if explicitly allowed
+      const isRailway = origin.endsWith('.up.railway.app');
+      const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+      
+      if (process.env.NODE_ENV !== 'production' || isRailway || isLocal || allowlist.includes(origin) || allowlist.includes('*')) {
         return cb(null, true);
       }
+      
       console.warn(`[cors] blocked origin: ${origin}`);
       return cb(new Error(`CORS: origin ${origin} not allowed`));
     },
