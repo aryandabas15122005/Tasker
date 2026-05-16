@@ -8,18 +8,13 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // Use SSL
+  service: 'gmail',
   auth: {
-    // We sanitize the password here to remove any accidental spaces
     user: process.env.EMAIL_USER?.trim(),
     pass: process.env.EMAIL_PASS?.replace(/\s/g, '')
   },
-  tls: {
-    // Helps avoid connection issues on some cloud providers
-    rejectUnauthorized: false
-  }
+  debug: true, // Show SMTP conversation in logs
+  logger: true // Log information to console
 });
 
 // Verify connection configuration
@@ -79,15 +74,16 @@ router.post('/send-otp', async (req: Request, res: Response): Promise<any> => {
     try {
       console.log('Attempting to connect to SMTP server...');
       const sendMailPromise = transporter.sendMail(mailOptions);
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('SMTP connection timed out')), 5000));
+      // Increased timeout to 8s for reliability
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('SMTP connection timed out')), 8000));
       await Promise.race([sendMailPromise, timeoutPromise]);
       console.log('Email sent successfully via Nodemailer');
     } catch (mailError) {
-      console.warn('Failed to send email (SMTP might be blocked by environment firewall):', mailError);
+      console.warn('!!! EMAIL FAILED BUT CONTINUING !!!', mailError);
     }
 
     console.log('Returning response');
-    res.json({ message: 'OTP sent to email successfully', devOtp: otp });
+    res.json({ message: 'OTP generated. If email does not arrive, check server logs.', devOtp: otp });
   } catch (error) {
     console.error('Send OTP outer error:', error);
     res.status(500).json({ message: 'Internal server error' });
