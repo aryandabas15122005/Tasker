@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart3, CheckCircle2, Clock, ListTodo, Calendar, TrendingUp, Sparkles } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
