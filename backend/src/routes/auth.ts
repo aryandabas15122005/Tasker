@@ -131,6 +131,15 @@ router.get('/admin/peek-otp', async (req: Request, res: Response): Promise<any> 
   });
 });
 
+// Debug route to check mailer status easily
+router.get('/mailer-status', (req: Request, res: Response) => {
+  const secret = process.env.ADMIN_SECRET;
+  if (req.query.secret !== secret) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  return res.json(getMailerStatus());
+});
+
 router.post('/login', async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, password } = req.body;
