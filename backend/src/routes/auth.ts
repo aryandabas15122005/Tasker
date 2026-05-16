@@ -8,10 +8,26 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    // We sanitize the password here to remove any accidental spaces
+    user: process.env.EMAIL_USER?.trim(),
+    pass: process.env.EMAIL_PASS?.replace(/\s/g, '')
+  },
+  tls: {
+    // Helps avoid connection issues on some cloud providers
+    rejectUnauthorized: false
+  }
+});
+
+// Verify connection configuration
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('SMTP Connection Error:', error);
+  } else {
+    console.log('SMTP Server is ready to take messages');
   }
 });
 
