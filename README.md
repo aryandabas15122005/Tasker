@@ -10,12 +10,12 @@ Tasker is a streamlined project management application designed to help teams or
 - **Data Visualization**: Real-time analytics charts to monitor team productivity.
 - **Role-Based Access**: Distinguishes between Admin and Member roles for project ownership and task assignment.
 
-## Tech Stack
+## Tech Stack (Simplified)
 
-- **Frontend**: React (Vite), TypeScript, Lucide Icons, Recharts, Axios.
-- **Backend**: Node.js, Express, Prisma ORM.
-- **Database**: MongoDB Atlas.
-- **Deployment**: Railway.
+- **Frontend**: Built with **React** for a responsive user interface and **TypeScript** for reliable code. We use **Lucide Icons** for a premium look and **Recharts** to handle all the data visualizations on the dashboard.
+- **Backend**: A robust **Node.js** and **Express** server that handles all API requests, authentication, and logic.
+- **Database**: **MongoDB Atlas** is used for flexible, cloud-based data storage, connected via **Prisma ORM** which ensures the database schema stays organized and fast.
+- **Deployment**: Hosted on **Railway** for seamless cloud performance and automatic deployments from GitHub.
 
 ## Demo Credentials
 
@@ -30,48 +30,45 @@ The database is pre-seeded with the following accounts for demonstration purpose
 | **Ria** | `ria@demo.com` | Member |
 | **Jatin** | `jatin@demo.com` | Member |
 
+## Environment Configuration
+
+To run this project locally or on a server, the following environment variables are required:
+
+### Backend (`/backend/.env`)
+```env
+# MongoDB Connection String
+DATABASE_URL="mongodb+srv://admin:Randi%400909@cluster0.7qzkjt1.mongodb.net/TaskManager?retryWrites=true&w=majority"
+
+# Security
+JWT_SECRET="your-super-secret-key-for-tasker-2024"
+
+# Server Port
+PORT=5000
+
+# Email Config (Optional since switch to simple signup)
+EMAIL_USER="aaryan.singh2971@gmail.com"
+EMAIL_PASS="dono lpsr jlut foxb"
+```
+
+### Frontend
+```env
+# API URL (Point this to your backend)
+VITE_API_URL="http://localhost:5000/api"
+```
+
 ## Local Setup
 
-### 1. Prerequisites
-- Node.js (v20+)
-- A MongoDB Atlas connection string
-
-### 2. Backend Configuration
-Navigate to the `backend` directory and create a `.env` file:
-```env
-DATABASE_URL="your_mongodb_connection_string"
-JWT_SECRET="your_secret_key"
-PORT=5000
-```
-Run the following commands:
+### 1. Backend
+Navigate to the `backend` directory:
 ```bash
 npm install
 npx prisma generate
 npm run dev
 ```
 
-### 3. Frontend Configuration
+### 2. Frontend
 Navigate to the `frontend` directory:
 ```bash
 npm install
 npm run dev
 ```
-
-## Deployment on Railway
-
-### Backend
-1. Connect your repository to Railway.
-2. Set the root directory to `backend`.
-3. Add the following variables:
-   - `DATABASE_URL`
-   - `JWT_SECRET`
-   - `NODE_ENV=production`
-
-### Frontend
-1. Connect your repository to Railway.
-2. Set the root directory to `frontend`.
-3. Add the following variable:
-   - `VITE_API_URL`: `https://your-backend-url.up.railway.app/api`
-
-## License
-Distributed under the MIT License.
