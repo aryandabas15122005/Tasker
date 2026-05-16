@@ -32,25 +32,18 @@ function buildTransporter(): Transporter | null {
 
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    requireTLS: true,
+    port: 465, // Use SSL port for more stability
+    secure: true,
     auth: { user, pass },
-    pool: true,
-    maxConnections: 3,
-    maxMessages: 50,
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 25000,
-    // Force IPv4 — Railway's IPv6 path to smtp.gmail.com frequently hangs.
+    // Extremely aggressive IPv4 enforcement for Railway
     family: 4,
-    // EHLO hostname. Gmail tolerates generic ones, but a stable identifier
-    // reduces the chance of rate-limit / spam-score weirdness on Railway.
-    name: process.env.MAILER_EHLO_NAME || 'tasker.production',
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
     tls: {
+      // Avoid SNI issues if any
       servername: 'smtp.gmail.com',
-      minVersion: 'TLSv1.2',
-      rejectUnauthorized: true
+      rejectUnauthorized: false // Helps in some restricted environments
     }
   } as any);
 }
