@@ -1,7 +1,4 @@
-import nodemailer, { Transporter } from 'nodemailer';
-
-let cachedTransporter: Transporter | null = null;
-let cachedSignature = '';
+import { Resend } from 'resend';
 
 export interface MailerStatus {
   lastSuccessAt: Date | null;
@@ -25,39 +22,10 @@ export function getMailerStatus(): MailerStatus {
   return { ...status };
 }
 
-function buildTransporter(): Transporter | null {
-  const user = process.env.EMAIL_USER?.trim();
-  const pass = process.env.EMAIL_PASS?.replace(/\s/g, '');
-  if (!user || !pass) return null;
-
-  return nodemailer.createTransport({
-    host: 'smtp.googlemail.com', // Alternative Gmail endpoint
-    port: 465,
-    secure: true,
-    auth: { user, pass },
-    family: 4,
-    pool: false, // Force a new connection every time
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 45000,
-    tls: {
-      servername: 'smtp.googlemail.com',
-      rejectUnauthorized: false
-    }
-  } as any);
-}
-
-function getTransporter(): Transporter | null {
-  const signature = `${process.env.EMAIL_USER || ''}|${process.env.EMAIL_PASS || ''}`;
-  if (!cachedTransporter || signature !== cachedSignature) {
-    cachedTransporter = buildTransporter();
-    cachedSignature = signature;
-  }
-  return cachedTransporter;
-}
-
-function sleep(ms: number) {
-  return new Promise<void>((r) => setTimeout(r, ms));
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return null;
+  return new Resend(apiKey);
 }
 
 export interface SendOtpEmailArgs {
@@ -66,31 +34,25 @@ export interface SendOtpEmailArgs {
 }
 
 export function sendOtpEmail({ to, otp }: SendOtpEmailArgs): void {
-  // Fire-and-forget so HTTP responses never block on SMTP.
-  void sendWithRetry(to, otp).catch((err) => {
-    const code = err?.code || err?.responseCode || 'UNKNOWN';
+  void sendWithResend(to, otp).catch((err) => {
     status.lastFailureAt = new Date();
-    status.lastFailureCode = String(code);
-    status.lastFailureMessage = err?.message ? String(err.message) : String(err);
+    status.lastFailureMessage = err?.message || String(err);
     status.failureCount += 1;
-    console.error(
-      `[mailer] EMAIL_TRANSPORT_DOWN: gave up sending OTP to ${to} (code=${code}): ${status.lastFailureMessage}`
-    );
+    console.error(`[mailer] Resend failure for ${to}: ${status.lastFailureMessage}`);
   });
 }
 
-async function sendWithRetry(to: string, otp: string, attempts = 3): Promise<void> {
-  const from = process.env.EMAIL_FROM?.trim() || process.env.EMAIL_USER?.trim();
-  if (!from) {
-    console.warn('[mailer] EMAIL_USER not configured — skipping email send.');
+async function sendWithResend(to: string, otp: string): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) {
+    console.warn('[mailer] RESEND_API_KEY not configured — skipping email send.');
     return;
   }
 
-  const mail = {
-    from: `Tasker <${from}>`,
+  const { error } = await resend.emails.send({
+    from: 'Tasker <onboarding@resend.dev>', // Free tier default
     to,
     subject: 'Your Tasker Verification Code',
-    text: `Your Tasker verification code is: ${otp}. It will expire in 10 minutes.`,
     html: `<div style="font-family: sans-serif; padding: 40px; background-color: #f0f4f3; text-align: center;">
       <div style="background-color: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 400px; margin: 0 auto;">
         <h1 style="color: #0f766e; font-family: 'Space Grotesk', sans-serif; margin-bottom: 20px;">Tasker</h1>
@@ -101,37 +63,13 @@ async function sendWithRetry(to: string, otp: string, attempts = 3): Promise<voi
         <p style="color: #5f7a73; font-size: 14px;">This code will expire in 10 minutes.</p>
       </div>
     </div>`
-  };
+  });
 
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    const transporter = getTransporter();
-    if (!transporter) {
-      console.warn('[mailer] no transporter (missing EMAIL_USER/EMAIL_PASS).');
-      return;
-    }
-    try {
-      const info = await transporter.sendMail(mail);
-      status.lastSuccessAt = new Date();
-      status.successCount += 1;
-      console.log(`[mailer] OTP email sent to ${to} (id=${info.messageId}, attempt=${attempt}).`);
-      return;
-    } catch (err: any) {
-      lastError = err;
-      const code = err?.code || err?.responseCode;
-      console.warn(`[mailer] attempt ${attempt}/${attempts} failed for ${to} (code=${code}): ${err?.message || err}`);
-
-      // Auth failures will never succeed on retry — abort early.
-      if (code === 'EAUTH' || err?.responseCode === 535) break;
-
-      // Reset transporter on socket-level failures so the next attempt rebuilds the pool.
-      if (['ETIMEDOUT', 'ECONNECTION', 'ESOCKET', 'ECONNRESET'].includes(code)) {
-        try { cachedTransporter?.close(); } catch { /* ignore */ }
-        cachedTransporter = null;
-      }
-
-      if (attempt < attempts) await sleep(500 * attempt);
-    }
+  if (error) {
+    throw error;
   }
-  throw lastError;
+
+  status.lastSuccessAt = new Date();
+  status.successCount += 1;
+  console.log(`[mailer] OTP email sent to ${to} via Resend.`);
 }
