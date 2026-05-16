@@ -1,114 +1,45 @@
-import React from 'react';
-
-interface State {
-  error: Error | null;
-  info: React.ErrorInfo | null;
-}
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
-  state: State = { error: null, info: null };
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return { error };
-  }
-
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('[ErrorBoundary] caught:', error, info);
-    this.setState({ info });
-  }
-
-  handleReset = () => {
-    this.setState({ error: null, info: null });
+class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null
   };
 
-  handleHardReset = () => {
-    try {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    } catch {
-      /* ignore */
-    }
-    window.location.assign('/login');
-  };
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
 
-  render() {
-    if (!this.state.error) return this.props.children;
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
+  }
 
-    const { error, info } = this.state;
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          padding: '2rem',
-          fontFamily: 'system-ui, sans-serif',
-          backgroundColor: '#fff',
-          color: '#1a2e2a',
-          overflowY: 'auto'
-        }}
-      >
-        <div style={{ maxWidth: '760px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: '#d64545' }}>
-            Something went wrong while rendering this page.
-          </h1>
-          <p style={{ color: '#5f7a73', marginBottom: '1.5rem' }}>
-            This is shown instead of a blank screen so you can see the underlying error.
-            Try the reset buttons below, or share the error text for support.
-          </p>
-
-          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={this.handleReset}
-              style={{
-                padding: '0.6rem 1rem',
-                border: '1.5px solid #0f766e',
-                background: '#0f766e',
-                color: '#fff',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              Try again
-            </button>
-            <button
-              onClick={this.handleHardReset}
-              style={{
-                padding: '0.6rem 1rem',
-                border: '1.5px solid #d5ddd9',
-                background: '#fff',
-                color: '#1a2e2a',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              Clear session and go to login
-            </button>
-          </div>
-
-          <details open style={{ background: '#f0f4f3', padding: '1rem', borderRadius: '8px' }}>
-            <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Error details</summary>
-            <pre
-              style={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                fontSize: '0.8rem',
-                marginTop: '0.75rem'
-              }}
-            >
-              {String(error?.name || 'Error')}: {String(error?.message || error)}
-              {'\n\n'}
-              {error?.stack || ''}
-              {info?.componentStack ? `\n\nComponent stack:${info.componentStack}` : ''}
-            </pre>
-          </details>
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#fff5f5', borderRadius: '12px', margin: '20px' }}>
+          <h2 style={{ color: '#c53030' }}>Oops, something went wrong.</h2>
+          <p style={{ color: '#742a2a' }}>{this.state.error?.message}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ padding: '10px 20px', backgroundColor: '#c53030', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', marginTop: '10px' }}
+          >
+            Reload Page
+          </button>
         </div>
-      </div>
-    );
+      );
+    }
+
+    return this.children;
   }
 }
 

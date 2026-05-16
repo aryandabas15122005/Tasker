@@ -6,23 +6,25 @@ import { useAuth } from '../context/AuthContext';
 const StatCard = ({ title, value, icon, color, accentBorder, delay }: any) => (
   <div className={`card animate-slide-up ${delay}`} style={{ 
     padding: '1.5rem', 
-    borderLeft: `4px solid ${accentBorder}`,
+    borderLeft: `4px solid ${accentBorder || 'var(--border)'}`,
     position: 'relative',
     overflow: 'hidden'
   }}>
     <div style={{ 
       position: 'absolute', 
-      top: '-10px', 
-      right: '-10px', 
-      opacity: 0.05, 
-      transform: 'rotate(-15deg)' 
+      top: '-15px', 
+      right: '-15px', 
+      opacity: 0.08, 
+      transform: 'rotate(-10deg)',
+      fontSize: '4rem',
+      color: color
     }}>
-      {React.cloneElement(icon as React.ReactElement, { size: 80 })}
+      {icon}
     </div>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
       <div>
         <p className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>{title}</p>
-        <h3 style={{ fontSize: '2.25rem', fontWeight: 700, lineHeight: 1, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>{value}</h3>
+        <h3 style={{ fontSize: '2.25rem', fontWeight: 700, lineHeight: 1, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>{value || 0}</h3>
       </div>
       <div style={{ color: color, padding: '0.5rem', backgroundColor: `${color}15`, borderRadius: '12px' }}>
         {icon}
