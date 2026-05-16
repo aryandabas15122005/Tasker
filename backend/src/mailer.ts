@@ -31,19 +31,18 @@ function buildTransporter(): Transporter | null {
   if (!user || !pass) return null;
 
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465, // Use SSL port for more stability
+    host: 'smtp.googlemail.com', // Alternative Gmail endpoint
+    port: 465,
     secure: true,
     auth: { user, pass },
-    // Extremely aggressive IPv4 enforcement for Railway
     family: 4,
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
+    pool: false, // Force a new connection every time
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 45000,
     tls: {
-      // Avoid SNI issues if any
-      servername: 'smtp.gmail.com',
-      rejectUnauthorized: false // Helps in some restricted environments
+      servername: 'smtp.googlemail.com',
+      rejectUnauthorized: false
     }
   } as any);
 }
